@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <button onclick="startNFCRead()">点击读取NFC卡</button>
+    <div id="nfc-output"></div>
+
+    <script>
+        // 检测浏览器是否支持 Web NFC API
+        if (!('NDEFReader' in window)) {
+            alert("当前浏览器不支持 Web NFC API，请使用 Chrome 89+ 或其他兼容浏览器。");
+        }
+
+        async function startNFCRead() {
+            try {
+                const reader = new NDEFReader(); // 创建 NFC 读取器对象
+
+                // 监听 NFC 标签读取事件
+                reader.addEventListener('reading', ({ message, serialNumber }) => {
+                    const output = document.getElementById('nfc-output');
+                    output.innerHTML = `检测到 NFC 卡：<br>
+                             序列号: ${serialNumber}<br>
+                             数据格式: ${message.records[0].recordType}`;
+                });
+
+                // 启动 NFC 读取（需用户主动触发，如点击按钮）
+                await reader.scan();
+                console.log("NFC 读取已启动，请靠近卡片...");
+            } catch (error) {
+                console.error("NFC 读取失败:", error);
+            }
+        }
+    </script>
+</body>
+
+</html>
