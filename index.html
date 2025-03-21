@@ -56,14 +56,16 @@
             color: white;
             border: none;
             border-radius: 8px;
-            cursor: pointer;
             margin: 0 auto 20px;
             display: block;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         button:active {
             background-color: #0056b3;
+            transform: translateY(1px);
         }
 
         #nfc-output {
@@ -76,6 +78,34 @@
             margin: 0 auto;
             white-space: pre-wrap;
             word-break: break-all;
+        }
+
+        .copy-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            display: inline-block;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .copy-button:active {
+            background-color: #218838;
+            transform: translateY(1px);
+        }
+
+        .copy-success {
+            background-color: #218838;
+        }
+
+        .result-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
         .sector {
@@ -95,20 +125,32 @@
         @media (max-width: 480px) {
             body {
                 padding: 5px;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
             }
             
             .container {
                 padding: 0 5px;
             }
             
-            select, button {
+            select {
                 font-size: 16px;
                 padding: 12px;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            button, .copy-button {
+                padding: 12px;
+                min-height: 44px;  /* 确保触摸目标足够大 */
             }
             
             #nfc-output {
                 font-size: 14px;
                 padding: 12px;
+            }
+
+            .result-container {
+                gap: 8px;  /* 增加元素间距，防止误触 */
             }
         }
     </style>
@@ -234,7 +276,7 @@
                     
                     // 处理并显示转换后的卡号
                     const processedNumber = processCardNumber(serialNumber, readType);
-                    outputText += `转换后卡号: ${processedNumber}\n`;
+                    outputText = `<div class="result-container">转换后卡号: <span id="card-number">${processedNumber}</span><button onclick="copyToClipboard()" class="copy-button">复制</button></div>\n`;
                     outputText += `读取类型: ${document.getElementById('readType').options[document.getElementById('readType').selectedIndex].text}\n`;
 
                     // 详细的调试信息
@@ -253,6 +295,24 @@
             } catch (error) {
                 console.error("NFC 读取失败:", error);
                 document.getElementById('nfc-output').innerHTML = `读取失败: ${error.message}`;
+            }
+        }
+
+        // 复制到剪贴板功能
+        async function copyToClipboard() {
+            const cardNumber = document.getElementById('card-number').textContent;
+            try {
+                await navigator.clipboard.writeText(cardNumber);
+                const copyButton = document.querySelector('.copy-button');
+                copyButton.textContent = '已复制';
+                copyButton.classList.add('copy-success');
+                setTimeout(() => {
+                    copyButton.textContent = '复制';
+                    copyButton.classList.remove('copy-success');
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
             }
         }
     </script>
