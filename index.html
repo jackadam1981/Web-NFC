@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
             margin: 0;
@@ -115,7 +115,7 @@
 </head>
 <body>
     <div class="container">
-        <select id="readType">
+        <select id="readType" title="读卡类型选择">
             <option value="hex16_10">10位16进制</option>
             <option value="hex16_8">8位16进制</option>
             <option value="hex16_8_reverse">8位16进制反向输出</option>
@@ -146,78 +146,74 @@
                 .join('');
         }
 
-        // 将字节数组转换为十进制字符串
-        function bytesToDec(bytes) {
-            return Array.from(bytes)
-                .map(b => b.toString(10).padStart(3, '0'))
-                .join('');
-        }
-
         // 处理卡号数据
         function processCardNumber(serialNumber, type) {
-            const bytes = hexStringToBytes(serialNumber);
+            // 移除冒号，获取纯十六进制字符串
+            const cleanHex = serialNumber.replace(/:/g, '');
             let result = '';
 
             switch(type) {
                 case 'hex16_10':
-                    result = serialNumber.padStart(10, '0');
+                    result = cleanHex.padStart(10, '0');
                     break;
                 case 'hex16_8':
-                    result = serialNumber.slice(-8);
+                    result = cleanHex.slice(-8);
                     break;
                 case 'hex16_8_reverse':
-                    result = serialNumber.slice(-8).split('').reverse().join('');
+                    result = cleanHex.slice(-8).split('').reverse().join('');
                     break;
                 case 'dec10_5':
-                    result = parseInt(serialNumber.slice(-4), 16).toString().padStart(5, '0');
+                    result = parseInt(cleanHex.slice(-4), 16).toString().padStart(5, '0');
                     break;
                 case 'dec10_8_3':
-                    result = parseInt(serialNumber.slice(-6), 16).toString().padStart(8, '0');
+                    result = parseInt(cleanHex.slice(-6), 16).toString().padStart(8, '0');
                     break;
                 case 'dec10_8_4':
-                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(8, '0');
+                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(8, '0');
                     break;
                 case 'dec10_10_3':
-                    result = parseInt(serialNumber.slice(-6), 16).toString().padStart(10, '0');
+                    // 取后6位十六进制（3字节）
+                    const last3Bytes = cleanHex.slice(-6);
+                    // 确保十进制转换正确 - 15125881 for cde603
+                    const decimalValue = parseInt(last3Bytes, 16);
+                    // 补零到10位 - 0015125881
+                    result = decimalValue.toString().padStart(10, '0');
+                    // 添加调试日志
+                    console.log('Input:', serialNumber);
+                    console.log('Clean hex:', cleanHex);
+                    console.log('Last 3 bytes:', last3Bytes);
+                    console.log('Decimal:', decimalValue);
+                    console.log('Result:', result);
                     break;
                 case 'dec10_10_4':
-                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0');
+                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0');
                     break;
                 case 'dec10_10_4_reverse':
-                    result = parseInt(serialNumber.slice(-8).split('').reverse().join(''), 16).toString().padStart(10, '0');
+                    const reversed = cleanHex.slice(-8).split('').reverse().join('');
+                    result = parseInt(reversed, 16).toString().padStart(10, '0');
                     break;
                 case 'dec10_wg26':
-                    const wg26 = calculateWG26(serialNumber);
-                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0') + wg26;
+                    const wg26 = calculateWG26(cleanHex);
+                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0') + wg26;
                     break;
                 case 'dec10_wg26_space':
-                    const wg26Space = calculateWG26(serialNumber);
-                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0') + ' ' + wg26Space;
+                    const wg26Space = calculateWG26(cleanHex);
+                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0') + ' ' + wg26Space;
                     break;
                 case 'dec10_13':
-                    result = parseInt(serialNumber, 16).toString().padStart(13, '0');
+                    result = parseInt(cleanHex, 16).toString().padStart(13, '0');
                     break;
                 default:
-                    result = serialNumber;
+                    result = cleanHex;
             }
             return result;
         }
 
         // 计算WG26格式
         function calculateWG26(serialNumber) {
-            // 这里添加WG26格式的计算逻辑
             const facilityCode = '0'; // 设施码，通常为0
             const cardNumber = parseInt(serialNumber.slice(-6), 16).toString().padStart(5, '0');
             return facilityCode + cardNumber;
-        }
-
-        // 十六进制字符串转字节数组
-        function hexStringToBytes(hex) {
-            const bytes = [];
-            for (let i = 0; i < hex.length; i += 2) {
-                bytes.push(parseInt(hex.substr(i, 2), 16));
-            }
-            return bytes;
         }
 
         async function startNFCRead() {
@@ -240,6 +236,14 @@
                     const processedNumber = processCardNumber(serialNumber, readType);
                     outputText += `转换后卡号: ${processedNumber}\n`;
                     outputText += `读取类型: ${document.getElementById('readType').options[document.getElementById('readType').selectedIndex].text}\n`;
+
+                    // 详细的调试信息
+                    const cleanHex = serialNumber.replace(/:/g, '');
+                    outputText += `\n调试信息：\n`;
+                    outputText += `清理后的十六进制: ${cleanHex}\n`;
+                    outputText += `后3字节(hex): ${cleanHex.slice(-6)}\n`;
+                    outputText += `十进制值: ${parseInt(cleanHex.slice(-6), 16)}\n`;
+                    outputText += `补零后结果: ${processedNumber}\n`;
 
                     output.innerHTML = outputText;
                 });
