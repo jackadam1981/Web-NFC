@@ -35,6 +35,18 @@
             padding: 0 10px;
         }
 
+        select {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 0 auto 20px;
+            display: block;
+            background-color: white;
+        }
+
         button {
             width: 100%;
             max-width: 300px;
@@ -89,7 +101,7 @@
                 padding: 0 5px;
             }
             
-            button {
+            select, button {
                 font-size: 16px;
                 padding: 12px;
             }
@@ -103,7 +115,21 @@
 </head>
 <body>
     <div class="container">
-        <button onclick="startNFCRead()">点击读取NFC卡1</button>
+        <select id="readType">
+            <option value="hex16_10">10位16进制</option>
+            <option value="hex16_8">8位16进制</option>
+            <option value="hex16_8_reverse">8位16进制反向输出</option>
+            <option value="dec10_5">5位10进制（ID后2字节转换）</option>
+            <option value="dec10_8_3">8位10进制（ID后3字节转换）</option>
+            <option value="dec10_8_4">8位10进制（ID后4字节转换）</option>
+            <option value="dec10_10_3" selected>10位10进制（ID后3字节转换）</option>
+            <option value="dec10_10_4">10位10进制（ID后4字节转换）</option>
+            <option value="dec10_10_4_reverse">10位10进制反向输出（ID后4字节转换）</option>
+            <option value="dec10_wg26">10位10进制 + WG26</option>
+            <option value="dec10_wg26_space">10位10进制 + 空格 + WG26</option>
+            <option value="dec10_13">13位10进制</option>
+        </select>
+        <button onclick="startNFCRead()">点击读取NFC卡</button>
         <div id="nfc-output"></div>
     </div>
     
@@ -117,66 +143,107 @@
         function bytesToHex(bytes) {
             return Array.from(bytes)
                 .map(b => b.toString(16).padStart(2, '0'))
-                .join(' ');
+                .join('');
         }
 
-        // 将字节数组转换为ASCII字符串
-        function bytesToAscii(bytes) {
+        // 将字节数组转换为十进制字符串
+        function bytesToDec(bytes) {
             return Array.from(bytes)
-                .map(b => String.fromCharCode(b))
+                .map(b => b.toString(10).padStart(3, '0'))
                 .join('');
+        }
+
+        // 处理卡号数据
+        function processCardNumber(serialNumber, type) {
+            const bytes = hexStringToBytes(serialNumber);
+            let result = '';
+
+            switch(type) {
+                case 'hex16_10':
+                    result = serialNumber.padStart(10, '0');
+                    break;
+                case 'hex16_8':
+                    result = serialNumber.slice(-8);
+                    break;
+                case 'hex16_8_reverse':
+                    result = serialNumber.slice(-8).split('').reverse().join('');
+                    break;
+                case 'dec10_5':
+                    result = parseInt(serialNumber.slice(-4), 16).toString().padStart(5, '0');
+                    break;
+                case 'dec10_8_3':
+                    result = parseInt(serialNumber.slice(-6), 16).toString().padStart(8, '0');
+                    break;
+                case 'dec10_8_4':
+                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(8, '0');
+                    break;
+                case 'dec10_10_3':
+                    result = parseInt(serialNumber.slice(-6), 16).toString().padStart(10, '0');
+                    break;
+                case 'dec10_10_4':
+                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0');
+                    break;
+                case 'dec10_10_4_reverse':
+                    result = parseInt(serialNumber.slice(-8).split('').reverse().join(''), 16).toString().padStart(10, '0');
+                    break;
+                case 'dec10_wg26':
+                    const wg26 = calculateWG26(serialNumber);
+                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0') + wg26;
+                    break;
+                case 'dec10_wg26_space':
+                    const wg26Space = calculateWG26(serialNumber);
+                    result = parseInt(serialNumber.slice(-8), 16).toString().padStart(10, '0') + ' ' + wg26Space;
+                    break;
+                case 'dec10_13':
+                    result = parseInt(serialNumber, 16).toString().padStart(13, '0');
+                    break;
+                default:
+                    result = serialNumber;
+            }
+            return result;
+        }
+
+        // 计算WG26格式
+        function calculateWG26(serialNumber) {
+            // 这里添加WG26格式的计算逻辑
+            const facilityCode = '0'; // 设施码，通常为0
+            const cardNumber = parseInt(serialNumber.slice(-6), 16).toString().padStart(5, '0');
+            return facilityCode + cardNumber;
+        }
+
+        // 十六进制字符串转字节数组
+        function hexStringToBytes(hex) {
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes.push(parseInt(hex.substr(i, 2), 16));
+            }
+            return bytes;
         }
 
         async function startNFCRead() {
             try {
                 const output = document.getElementById('nfc-output');
+                const readType = document.getElementById('readType').value;
                 output.innerHTML = "正在读取NFC卡，请将卡片靠近...";
 
-                // 请求NFC权限
                 const permission = await navigator.permissions.query({ name: 'nfc' });
                 if (permission.state === 'denied') {
                     throw new Error('NFC权限被拒绝');
                 }
 
-                // 创建NFC读取器
                 const reader = new NDEFReader();
                 
-                // 监听NFC标签读取事件
                 reader.addEventListener('reading', ({ message, serialNumber }) => {
-                    let outputText = `卡片信息：\n`;
-                    outputText += `序列号: ${serialNumber}\n\n`;
+                    let outputText = `原始序列号: ${serialNumber}\n\n`;
                     
-                    // 显示所有记录
-                    if (message.records && message.records.length > 0) {
-                        outputText += `检测到 ${message.records.length} 条记录：\n\n`;
-                        
-                        message.records.forEach((record, index) => {
-                            outputText += `记录 ${index + 1}:\n`;
-                            outputText += `类型: ${record.recordType}\n`;
-                            
-                            if (record.mediaType) {
-                                outputText += `MIME类型: ${record.mediaType}\n`;
-                            }
-                            
-                            if (record.data) {
-                                outputText += `数据(HEX): ${bytesToHex(record.data)}\n`;
-                                outputText += `数据(ASCII): ${bytesToAscii(record.data)}\n`;
-                            }
-                            
-                            outputText += '\n';
-                        });
-                    } else {
-                        outputText += `注意：未检测到NDEF数据\n`;
-                        outputText += `这可能是因为：\n`;
-                        outputText += `1. 卡片未格式化\n`;
-                        outputText += `2. 卡片使用其他格式\n`;
-                        outputText += `3. 卡片被加密\n`;
-                    }
+                    // 处理并显示转换后的卡号
+                    const processedNumber = processCardNumber(serialNumber, readType);
+                    outputText += `转换后卡号: ${processedNumber}\n`;
+                    outputText += `读取类型: ${document.getElementById('readType').options[document.getElementById('readType').selectedIndex].text}\n`;
 
                     output.innerHTML = outputText;
                 });
 
-                // 启动NFC读取
                 await reader.scan();
                 console.log("NFC 读取已启动，请靠近卡片...");
             } catch (error) {
