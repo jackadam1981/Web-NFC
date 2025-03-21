@@ -1,36 +1,190 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
 
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 10px;
+            line-height: 1.6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+
+        button {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 auto 20px;
+            display: block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            background-color: #0056b3;
+        }
+
+        #nfc-output {
+            width: 100%;
+            max-width: 300px;
+            font-size: 16px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin: 0 auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .sector {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .sector-header {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 0 5px;
+            }
+            
+            button {
+                font-size: 16px;
+                padding: 12px;
+            }
+            
+            #nfc-output {
+                font-size: 14px;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
 <body>
-    <button onclick="startNFCRead()">点击读取NFC卡</button>
-    <div id="nfc-output"></div>
-
+    <div class="container">
+        <button onclick="startNFCRead()">点击读取NFC卡1</button>
+        <div id="nfc-output"></div>
+    </div>
+    
     <script>
         // 检测浏览器是否支持 Web NFC API
         if (!('NDEFReader' in window)) {
             alert("当前浏览器不支持 Web NFC API，请使用 Chrome 89+ 或其他兼容浏览器。");
         }
 
+        // 将字节数组转换为十六进制字符串
+        function bytesToHex(bytes) {
+            return Array.from(bytes)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join(' ');
+        }
+
+        // 将字节数组转换为ASCII字符串
+        function bytesToAscii(bytes) {
+            return Array.from(bytes)
+                .map(b => String.fromCharCode(b))
+                .join('');
+        }
+
         async function startNFCRead() {
             try {
-                const reader = new NDEFReader(); // 创建 NFC 读取器对象
+                const output = document.getElementById('nfc-output');
+                output.innerHTML = "正在读取NFC卡，请将卡片靠近...";
 
-                // 监听 NFC 标签读取事件
+                // 请求NFC权限
+                const permission = await navigator.permissions.query({ name: 'nfc' });
+                if (permission.state === 'denied') {
+                    throw new Error('NFC权限被拒绝');
+                }
+
+                // 创建NFC读取器
+                const reader = new NDEFReader();
+                
+                // 监听NFC标签读取事件
                 reader.addEventListener('reading', ({ message, serialNumber }) => {
-                    const output = document.getElementById('nfc-output');
-                    output.innerHTML = `检测到 NFC 卡：<br>
-                             序列号: ${serialNumber}<br>
-                             数据格式: ${message.records[0].recordType}`;
+                    let outputText = `卡片信息：\n`;
+                    outputText += `序列号: ${serialNumber}\n\n`;
+                    
+                    // 显示所有记录
+                    if (message.records && message.records.length > 0) {
+                        outputText += `检测到 ${message.records.length} 条记录：\n\n`;
+                        
+                        message.records.forEach((record, index) => {
+                            outputText += `记录 ${index + 1}:\n`;
+                            outputText += `类型: ${record.recordType}\n`;
+                            
+                            if (record.mediaType) {
+                                outputText += `MIME类型: ${record.mediaType}\n`;
+                            }
+                            
+                            if (record.data) {
+                                outputText += `数据(HEX): ${bytesToHex(record.data)}\n`;
+                                outputText += `数据(ASCII): ${bytesToAscii(record.data)}\n`;
+                            }
+                            
+                            outputText += '\n';
+                        });
+                    } else {
+                        outputText += `注意：未检测到NDEF数据\n`;
+                        outputText += `这可能是因为：\n`;
+                        outputText += `1. 卡片未格式化\n`;
+                        outputText += `2. 卡片使用其他格式\n`;
+                        outputText += `3. 卡片被加密\n`;
+                    }
+
+                    output.innerHTML = outputText;
                 });
 
-                // 启动 NFC 读取（需用户主动触发，如点击按钮）
+                // 启动NFC读取
                 await reader.scan();
                 console.log("NFC 读取已启动，请靠近卡片...");
             } catch (error) {
                 console.error("NFC 读取失败:", error);
+                document.getElementById('nfc-output').innerHTML = `读取失败: ${error.message}`;
             }
         }
     </script>
-</body>
 
+</body>
 </html>
