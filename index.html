@@ -190,9 +190,10 @@
             <option value="dec10_5">5位10进制（ID后2字节转换）</option>
             <option value="dec10_8_3">8位10进制（ID后3字节转换）</option>
             <option value="dec10_8_4">8位10进制（ID后4字节转换）</option>
-            <option value="dec10_10_3" selected>10位10进制（ID后3字节转换）</option>
+            <option value="dec10_10_3" >10位10进制（ID后3字节转换）</option>
             <option value="dec10_10_4">10位10进制（ID后4字节转换）</option>
             <option value="dec10_10_4_reverse">10位10进制反向输出（ID后4字节转换）</option>
+            <option value="dec10_10_3_reverse_first" selected>10位10进制反向输出（ID前3字节转换）</option>
             <option value="dec10_wg26">10位10进制 + WG26</option>
             <option value="dec10_wg26_space">10位10进制 + 空格 + WG26</option>
             <option value="dec10_13">13位10进制</option>
@@ -219,62 +220,132 @@
             // 移除冒号，获取纯十六进制字符串
             const cleanHex = serialNumber.replace(/:/g, '');
             let result = '';
+            let debug = [];
+
+            // 添加基础调试信息
+            debug.push(`清理后的十六进制: ${cleanHex}`);
 
             switch(type) {
                 case 'hex16_10':
                     result = cleanHex.padStart(10, '0');
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'hex16_8':
                     result = cleanHex.slice(-8);
+                    debug.push(`后8位: ${result}`);
                     break;
+
                 case 'hex16_8_reverse':
-                    result = cleanHex.slice(-8).split('').reverse().join('');
+                    const hex8 = cleanHex.slice(-8);
+                    result = hex8.split('').reverse().join('');
+                    debug.push(`后8位: ${hex8}`);
+                    debug.push(`反转后: ${result}`);
                     break;
+
                 case 'dec10_5':
-                    result = parseInt(cleanHex.slice(-4), 16).toString().padStart(5, '0');
+                    const hex2 = cleanHex.slice(-4);
+                    const dec2 = parseInt(hex2, 16);
+                    result = dec2.toString().padStart(5, '0');
+                    debug.push(`后2字节(hex): ${hex2}`);
+                    debug.push(`十进制值: ${dec2}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'dec10_8_3':
-                    result = parseInt(cleanHex.slice(-6), 16).toString().padStart(8, '0');
+                    const hex3 = cleanHex.slice(-6);
+                    const dec3 = parseInt(hex3, 16);
+                    result = dec3.toString().padStart(8, '0');
+                    debug.push(`后3字节(hex): ${hex3}`);
+                    debug.push(`十进制值: ${dec3}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'dec10_8_4':
-                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(8, '0');
+                    const hex4 = cleanHex.slice(-8);
+                    const dec4 = parseInt(hex4, 16);
+                    result = dec4.toString().padStart(8, '0');
+                    debug.push(`后4字节(hex): ${hex4}`);
+                    debug.push(`十进制值: ${dec4}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'dec10_10_3':
-                    // 取后6位十六进制（3字节）
-                    const last3Bytes = cleanHex.slice(-6);
-                    // 确保十进制转换正确 - 15125881 for cde603
-                    const decimalValue = parseInt(last3Bytes, 16);
-                    // 补零到10位 - 0015125881
-                    result = decimalValue.toString().padStart(10, '0');
-                    // 添加调试日志
-                    console.log('Input:', serialNumber);
-                    console.log('Clean hex:', cleanHex);
-                    console.log('Last 3 bytes:', last3Bytes);
-                    console.log('Decimal:', decimalValue);
-                    console.log('Result:', result);
+                    const hex3_10 = cleanHex.slice(-6);
+                    const dec3_10 = parseInt(hex3_10, 16);
+                    result = dec3_10.toString().padStart(10, '0');
+                    debug.push(`后3字节(hex): ${hex3_10}`);
+                    debug.push(`十进制值: ${dec3_10}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'dec10_10_4':
-                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0');
+                    const hex4_10 = cleanHex.slice(-8);
+                    const dec4_10 = parseInt(hex4_10, 16);
+                    result = dec4_10.toString().padStart(10, '0');
+                    debug.push(`后4字节(hex): ${hex4_10}`);
+                    debug.push(`十进制值: ${dec4_10}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 case 'dec10_10_4_reverse':
-                    const reversed = cleanHex.slice(-8).split('').reverse().join('');
-                    result = parseInt(reversed, 16).toString().padStart(10, '0');
+                    const hex4_rev = cleanHex.slice(-8);
+                    const hex4_rev_result = hex4_rev.split('').reverse().join('');
+                    const dec4_rev = parseInt(hex4_rev_result, 16);
+                    result = dec4_rev.toString().padStart(10, '0');
+                    debug.push(`后4字节(hex): ${hex4_rev}`);
+                    debug.push(`反转后(hex): ${hex4_rev_result}`);
+                    debug.push(`十进制值: ${dec4_rev}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
+                case 'dec10_10_3_reverse_first':
+                    const first3Bytes = cleanHex.slice(0, 6);
+                    const reversedFirst3Bytes = first3Bytes.split('').reverse().join('');
+                    const decimalValueReversed = parseInt(reversedFirst3Bytes, 16);
+                    result = decimalValueReversed.toString().padStart(10, '0');
+                    debug.push(`前3字节(hex): ${first3Bytes}`);
+                    debug.push(`反转后(hex): ${reversedFirst3Bytes}`);
+                    debug.push(`十进制值: ${decimalValueReversed}`);
+                    debug.push(`补零后结果: ${result}`);
+                    break;
+
                 case 'dec10_wg26':
+                    const hex3_wg = cleanHex.slice(-6);
+                    const dec3_wg = parseInt(hex3_wg, 16);
                     const wg26 = calculateWG26(cleanHex);
-                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0') + wg26;
+                    result = dec3_wg.toString().padStart(10, '0') + wg26;
+                    debug.push(`后3字节(hex): ${hex3_wg}`);
+                    debug.push(`设施码: 0`);
+                    debug.push(`卡号: ${dec3_wg}`);
+                    debug.push(`WG26格式: ${result}`);
                     break;
+
                 case 'dec10_wg26_space':
-                    const wg26Space = calculateWG26(cleanHex);
-                    result = parseInt(cleanHex.slice(-8), 16).toString().padStart(10, '0') + ' ' + wg26Space;
+                    const hex3_wgs = cleanHex.slice(-6);
+                    const dec3_wgs = parseInt(hex3_wgs, 16);
+                    const wg26s = calculateWG26(cleanHex);
+                    result = dec3_wgs.toString().padStart(10, '0') + ' ' + wg26s;
+                    debug.push(`后3字节(hex): ${hex3_wgs}`);
+                    debug.push(`设施码: 0`);
+                    debug.push(`卡号: ${dec3_wgs}`);
+                    debug.push(`WG26格式(带空格): ${result}`);
                     break;
+
                 case 'dec10_13':
-                    result = parseInt(cleanHex, 16).toString().padStart(13, '0');
+                    const decAll = parseInt(cleanHex, 16);
+                    result = decAll.toString().padStart(13, '0');
+                    debug.push(`完整hex: ${cleanHex}`);
+                    debug.push(`十进制值: ${decAll}`);
+                    debug.push(`补零后结果: ${result}`);
                     break;
+
                 default:
                     result = cleanHex;
+                    debug.push(`使用原始值: ${result}`);
             }
-            return result;
+
+            return { result, debug };
         }
 
         // 计算WG26格式
@@ -298,23 +369,18 @@
                 const reader = new NDEFReader();
                 
                 reader.addEventListener('reading', ({ message, serialNumber }) => {
-                    let outputText = `原始序列号: ${serialNumber}\n\n`;
-                    
                     // 处理并显示转换后的卡号
-                    const processedNumber = processCardNumber(serialNumber, readType);
+                    const { result: processedNumber, debug } = processCardNumber(serialNumber, readType);
+                    
+                    // 构建输出文本
+                    let outputText = `原始序列号: ${serialNumber}\n\n`;
                     outputText = `<div class="result-container">
                         <div>转换后卡号: <span id="card-number">${processedNumber}</span></div>
                         <button onclick="copyToClipboard()" class="copy-button">复制</button>
                     </div>\n`;
                     outputText += `读取类型: ${document.getElementById('readType').options[document.getElementById('readType').selectedIndex].text}\n`;
-
-                    // 详细的调试信息
-                    const cleanHex = serialNumber.replace(/:/g, '');
                     outputText += `\n调试信息：\n`;
-                    outputText += `清理后的十六进制: ${cleanHex}\n`;
-                    outputText += `后3字节(hex): ${cleanHex.slice(-6)}\n`;
-                    outputText += `十进制值: ${parseInt(cleanHex.slice(-6), 16)}\n`;
-                    outputText += `补零后结果: ${processedNumber}\n`;
+                    outputText += debug.join('\n');
 
                     output.innerHTML = outputText;
                 });
