@@ -192,8 +192,8 @@
             <option value="dec10_8_4">8位10进制（ID后4字节转换）</option>
             <option value="dec10_10_3" >10位10进制（ID后3字节转换）</option>
             <option value="dec10_10_4">10位10进制（ID后4字节转换）</option>
-            <option value="dec10_10_4_reverse">10位10进制反向输出（ID后4字节转换）</option>
-            <option value="dec10_10_3_reverse_first" selected>10位10进制反向输出（ID前3字节转换）</option>
+            <option value="dec10_10_4_reverse">10位10进制（ID后4字节反向输出转换）</option>
+            <option value="dec10_10_3_reverse_first" selected>10位10进制（ID前3字节反向输出转换）</option>
             <option value="dec10_wg26">10位10进制 + WG26</option>
             <option value="dec10_wg26_space">10位10进制 + 空格 + WG26</option>
             <option value="dec10_13">13位10进制</option>
@@ -301,11 +301,13 @@
 
                 case 'dec10_10_3_reverse_first':
                     const first3Bytes = cleanHex.slice(0, 6);
-                    const reversedFirst3Bytes = first3Bytes.split('').reverse().join('');
+                    // 每2个字符为一组进行反转
+                    const byteArray = first3Bytes.match(/.{2}/g) || [];
+                    const reversedFirst3Bytes = byteArray.reverse().join('');
                     const decimalValueReversed = parseInt(reversedFirst3Bytes, 16);
                     result = decimalValueReversed.toString().padStart(10, '0');
                     debug.push(`前3字节(hex): ${first3Bytes}`);
-                    debug.push(`反转后(hex): ${reversedFirst3Bytes}`);
+                    debug.push(`字节反转(hex): ${reversedFirst3Bytes}`);
                     debug.push(`十进制值: ${decimalValueReversed}`);
                     debug.push(`补零后结果: ${result}`);
                     break;
