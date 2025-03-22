@@ -35,6 +35,20 @@
             padding: 0 16px;
         }
 
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .version {
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+        }
+
         select {
             width: 100%;
             max-width: 600px;
@@ -168,6 +182,7 @@
 </head>
 <body>
     <div class="container">
+        <h1 class="title">吴氏手机读卡器<span class="version">v0.1</span></h1>
         <select id="readType" title="读卡类型选择">
             <option value="hex16_10">10位16进制</option>
             <option value="hex16_8">8位16进制</option>
